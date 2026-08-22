@@ -16,6 +16,7 @@ import {
   ProgressOrError,
   journalize,
   coreConfirm,
+  coreAlert,
   parseData,
   Helmet,
 } from "@openimis/fe-core";
@@ -78,6 +79,37 @@ class FamilyForm extends Component {
       this.setState((state, props) => ({
         family: { ...state.family, clientMutationId: props.mutation.clientMutationId },
       }));
+    } else if (this.state.isSaved && !!this.state.family?.clientMutationId) {
+      // Asynchronous mutation completion.
+      //
+      // Setting clientMutationId above makes runningMutation true, which locks
+      // the page. Nothing then observed the mutation log, so a SUCCESSFUL save
+      // left the form locked indefinitely with no message and no navigation —
+      // reload() (which fetches the created family and routes to its overview)
+      // was only reachable from the manual Reload button.
+      //
+      // Mutation status is polled into state.core.mutations: 0 = pending,
+      // 1 = error, anything else = done.
+      const { clientMutationId } = this.state.family;
+      const tracked = (this.props.mutations || []).find((m) => m.clientMutationId === clientMutationId);
+      const wasTracked = (prevProps.mutations || []).find((m) => m.clientMutationId === clientMutationId);
+      if (tracked && tracked.status !== 0 && (!wasTracked || wasTracked.status === 0)) {
+        if (tracked.status === 1) {
+          // Failure: unlock so the operator can correct and retry, and surface
+          // the reason instead of leaving a silent locked page.
+          this.setState((state) => ({
+            isSaved: false,
+            lockNew: false,
+            family: { ...state.family, clientMutationId: null },
+          }));
+          this.props.coreAlert(
+            formatMessage(this.props.intl, "insuree", "FamilyForm.mutation.failed.title"),
+            tracked.error || formatMessage(this.props.intl, "insuree", "FamilyForm.mutation.failed.message"),
+          );
+        } else {
+          this.reload();
+        }
+      }
     } else if (prevProps.confirmed !== this.props.confirmed && !!this.props.confirmed && !!this.state.confirmedAction) {
       this.state.confirmedAction();
     }
@@ -245,6 +277,7 @@ const mapStateToProps = (state, props) => ({
   fetchedFamily: state.insuree.fetchedFamily,
   family: state.insuree.family,
   submittingMutation: state.insuree.submittingMutation,
+  mutations: state.core.mutations,
   mutation: state.insuree.mutation,
   insuree: state.insuree.insuree,
   confirmed: state.core.confirmed,
@@ -264,7 +297,7 @@ const mapStateToProps = (state, props) => ({
 
 const mapDispatchToProps = (dispatch) => {
   return bindActionCreators(
-    { fetchFamilyMutation, fetchFamily, newFamily, createFamily, journalize, coreConfirm },
+    { fetchFamilyMutation, fetchFamily, newFamily, createFamily, journalize, coreConfirm, coreAlert },
     dispatch,
   );
 };

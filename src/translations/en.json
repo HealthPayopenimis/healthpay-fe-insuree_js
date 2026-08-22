@@ -289,5 +289,7 @@
   "resetFilters.buttonText": "Reset",
   "familySelectExistingInsureeAsHead.buttonText": "Select existing",
   "insuree.FamilyForm.mutation.failed.title": "Save failed",
-  "insuree.FamilyForm.mutation.failed.message": "The family could not be saved. Please review the form and try again."
+  "insuree.FamilyForm.mutation.failed.message": "The family could not be saved. Please review the form and try again.",
+  "insuree.InsureeForm.mutation.failed.title": "Save failed",
+  "insuree.InsureeForm.mutation.failed.message": "The insuree could not be saved. Please review the form and try again."
 }

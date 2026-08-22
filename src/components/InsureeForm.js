@@ -8,6 +8,8 @@ import ReplayIcon from "@material-ui/icons/Replay";
 
 import {
   formatMessageWithValues,
+  formatMessage,
+  coreAlert,
   withModulesManager,
   withHistory,
   historyPush,
@@ -94,6 +96,31 @@ class InsureeForm extends Component {
           clientMutationId: props.mutation.clientMutationId,
         };
       });
+    } else if (this.state.isSaved && !!this.state.clientMutationId) {
+      // Asynchronous mutation completion — same defect and same fix as
+      // FamilyForm. Setting clientMutationId makes runningMutation true and
+      // locks the page; nothing observed the mutation log, so a SUCCESSFUL save
+      // left the form locked on the _NEW_ route with no message and no
+      // navigation. reload() (fetch the created insuree, route to it) was only
+      // reachable from the manual Reload button.
+      //
+      // state.core.mutations is polled by the journal: 0 = pending, 1 = error.
+      const { clientMutationId } = this.state;
+      const tracked = (this.props.mutations || []).find((m) => m.clientMutationId === clientMutationId);
+      const wasTracked = (prevProps.mutations || []).find((m) => m.clientMutationId === clientMutationId);
+      if (tracked && tracked.status !== 0 && (!wasTracked || wasTracked.status === 0)) {
+        if (tracked.status === 1) {
+          // Failure: unlock so the operator can correct and retry, and show the
+          // reason rather than leaving a silent locked page.
+          this.setState({ isSaved: false, lockNew: false, clientMutationId: false });
+          this.props.coreAlert(
+            formatMessage(this.props.intl, "insuree", "InsureeForm.mutation.failed.title"),
+            tracked.error || formatMessage(this.props.intl, "insuree", "InsureeForm.mutation.failed.message"),
+          );
+        } else {
+          this.reload();
+        }
+      }
     }
 
     if (!this.state.insuree.family && this.props.family) {
@@ -292,6 +319,7 @@ const mapStateToProps = (state, props) => ({
   fetchedFamily: state.insuree.fetchedFamily,
   family: state.insuree.family,
   submittingMutation: state.insuree.submittingMutation,
+  mutations: state.core.mutations,
   mutation: state.insuree.mutation,
   isChfIdValid: state.insuree?.validationFields?.insureeNumber?.isValid,
 });
@@ -304,6 +332,7 @@ export default withHistory(
       clearInsuree,
       fetchInsureeMutation,
       journalize,
+      coreAlert,
     })(injectIntl(withTheme(withStyles(styles)(InsureeForm)))),
   ),
 );

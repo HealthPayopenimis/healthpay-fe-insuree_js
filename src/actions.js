@@ -499,8 +499,8 @@ export function changeFamily(mm, family_uuid, insuree, cancelPolicies, clientMut
 export function insureeNumberValidationCheck(mm, variables) {
   return graphqlWithVariables(
     `
-    query ($insuranceNumber: String!) {
-      insureeNumberValidity(insureeNumber: $insuranceNumber) {
+    query ($insuranceNumber: String!, $insureeUuid: String) {
+      insureeNumberValidity(insureeNumber: $insuranceNumber, insureeUuid: $insureeUuid) {
         isValid
         errorCode
         errorMessage

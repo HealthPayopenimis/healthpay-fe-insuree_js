@@ -18,21 +18,21 @@ const InsureeNumberInput = (props) => {
     isInsureeNumberValidating,
     insureeNumberValidationError,
     insureeNumberValidationErrorMessage,
+    insureeUuid,
   } = props;
   const modulesManager = useModulesManager();
   const numberMaxLength = modulesManager.getConf("fe-insuree", "insureeForm.chfIdMaxLength", 12);
 
-  const shouldValidate = (inputValue) => {
-    const { savedInsureeNumber, headSelected } = props;
-
-    if (headSelected && savedInsureeNumber && inputValue === savedInsureeNumber) return false;
-
-    if (!headSelected || (headSelected && savedInsureeNumber)) return inputValue !== savedInsureeNumber;
-  };
+  // A cached selected head's number is not proof of uniqueness for a new
+  // family member. Always validate a nonempty number; only an actual existing
+  // insuree UUID may exempt that same record (including its own history).
+  const shouldValidate = (inputValue) => !!inputValue;
 
   return (
     <ValidatedTextInput
+      key={insureeUuid || "new"}
       itemQueryIdentifier="insuranceNumber"
+      additionalQueryArgs={insureeUuid ? { insureeUuid } : undefined}
       codeTakenLabel={insureeNumberValidationErrorMessage}
       shouldValidate={shouldValidate}
       isValid={isInsureeNumberValid}
@@ -59,8 +59,6 @@ const mapStateToProps = (state) => ({
   isInsureeNumberValidating: state.insuree.validationFields?.insureeNumber?.isValidating,
   insureeNumberValidationError: state.insuree.validationFields?.insureeNumber?.validationError,
   insureeNumberValidationErrorMessage: state.insuree.validationFields?.insureeNumber?.validationErrorMessage,
-  savedInsureeNumber: state.insuree?.insuree?.chfId,
-  headSelected: state.insuree?.headSelected,
 });
 
 export default withModulesManager(connect(mapStateToProps)(injectIntl(InsureeNumberInput)));

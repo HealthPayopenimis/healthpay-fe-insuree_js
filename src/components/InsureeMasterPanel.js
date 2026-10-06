@@ -160,6 +160,7 @@ class InsureeMasterPanel extends FormPanel {
                   readOnly={readOnly}
                   value={edited?.chfId}
                   editedId={editedId}
+                  insureeUuid={edited?.uuid}
                   onChange={(v) => this.updateAttribute("chfId", v)}
                 />
               </Grid>
